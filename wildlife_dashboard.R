@@ -219,7 +219,8 @@ regions <-
     "data/geo/county_codes.csv",
     sep = ";",
     dec = ",",
-    na.strings = ""
+    na.strings = "",
+    colClasses = rep("factor", 5)
   )
 
 # add column for domestic/international
@@ -237,8 +238,6 @@ wild_all <- wild_all %>%
   ),
   NA,
   Region))
-
-
 
 # visualize the trend and distribution 
 
@@ -298,4 +297,37 @@ sort(unique(birds$Order))
     theme_classic()
 )
 
-(map_data <- st_read('data/geo/Lan_Sweref99TM_region.shp'))
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+map <- st_read('data/geo/Lan_Sweref99TM_region.shp')
+
+reg_cnt <- wild_all %>%
+  filter(!International & !is.na(Region)) %>%
+  group_by(Region) %>%
+  summarise(n = n(), mca = Mode(Animal))
+
+regs_w_cnt <- regions %>%
+  left_join(reg_cnt, by = c("Code" = "Region"))
+
+tot_cnt <- regs_w_cnt %>%
+  group_by(New.Code) %>%
+  summarise(n = sum(n),)
+
+regs_w_cnt <- regs_w_cnt %>%
+  select(-n) %>%
+  inner_join(tot_cnt, by = c("Code" = "New.Code")) %>%
+  mutate(Code = as.factor(Code))
+
+map %>%
+  left_join(
+    regs_w_cnt %>% select(Numbercode, n, Lettercode = New.Code, mca),
+    by = c("LnKod" = "Numbercode")
+  ) %>%
+  ggplot() +
+  geom_sf(aes(fill = n)) +
+  geom_sf_label(aes(label = mca, alpha = 0.5), show.legend = F) +
+  labs(title = "Total number of wildlife cases\n(all time)")
+ggsave("data/output/case_count_mca.png")
