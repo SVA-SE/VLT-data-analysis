@@ -242,7 +242,7 @@ wild.found.region <- merge(wild.all[region %in% regions$Code],
                            all.x = TRUE) %>%
   .[, region := `New Code`] %>%
   .[, -"New Code"] %>%
-  setcolorder(names(wild.unfound)) %>%
+  setcolorder(names(wild.all)) %>%
   setkey()
 
 
@@ -297,4 +297,7 @@ wild.with.region <- rbindlist(list(
   .[, -"c.code"] %>%
   .[order(date)]
 
-
+save(wild.all,
+     wild.with.region,
+     regions.codeletter,
+     file = paste0(data.path, "/output/wildlife.data.Rdata"))
